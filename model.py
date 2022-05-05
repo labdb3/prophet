@@ -5,7 +5,6 @@ import pickle
 from sklearn.metrics import mean_squared_error
 import time
 
-from sqlalchemy import true
 np.random.seed(int(time.time()))
 
 
@@ -106,6 +105,13 @@ def gen_test_data():
             y += np.power(data[:, i], j+1)
 
     return data, y[:, np.newaxis]
+
+def RegisteredModel(key):
+    models_dict = {
+        '多项式模型': PolynomialModel
+    }
+    return models_dict[key]
+
 
 
 if __name__ == '__main__':
