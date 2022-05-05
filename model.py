@@ -13,13 +13,13 @@ class MetaModel:
     def pred(self, X: np.ndarray):
         pass
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+    def fit(self, X: np.ndarray, y: np.ndarray):
         pass
 
-    def save(self, path: str) -> bool:
+    def save(self, path: str):
         pass
 
-    def load(self, path: str) -> bool:
+    def load(self, path: str):
         pass
 
 
@@ -29,23 +29,27 @@ class PolynomialModel(MetaModel):
         self.model = None
 
     def pred(self, X: np.ndarray):
+        assert self.model != None
+        assert self.power != None
+        assert X.shape[1] == len(self.power)
+
         _X = self.preprocess(X)
         preditions = self.model.predict(_X)
         return preditions
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
-        self.model = LinearRegression(fit_intercept = False)
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        assert self.power != None
+        assert X.shape[1] == len(self.power)
+
+        self.model = LinearRegression(fit_intercept=False)
         _X = self.preprocess(X)
         self.model.fit(_X, y)
-
 
     def save(self, path: str):
         pickle.dump([self.model, self.power], open(path, "wb"))
 
-
     def load(self, path: str):
         self.model, self.power = pickle.load(open(path, "rb"))
-
 
     def preprocess(self, X: np.ndarray):
         data = X.tolist()
@@ -84,11 +88,11 @@ def gen_test_data():
 
 
 if __name__ == '__main__':
-    model = PolynomialModel([3,2,3,3,3,3])
+    model = PolynomialModel([3, 2, 3, 3, 3, 3])
     data, y = gen_data()
-    model.fit(data,y)
+    model.fit(data, y)
     _y = model.pred(data)
-    print(mean_squared_error(_y,y))
+    print(mean_squared_error(_y, y))
     model.save("model.pkl")
 
     model = PolynomialModel()
