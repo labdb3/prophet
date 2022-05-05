@@ -1,15 +1,8 @@
-from pyexpat import model
-from tkinter import Y
 import numpy as np
-import pandas as pd
-from sklearn.exceptions import NonBLASDotWarning
 from sklearn.linear_model import LinearRegression
 import pickle
 from sklearn.metrics import mean_squared_error
 import time
-
-from torch import ge
-
 np.random.seed(int(time.time()))
 
 
