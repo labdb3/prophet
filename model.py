@@ -1,11 +1,6 @@
-from tkinter import E
 import numpy as np
 from sklearn.linear_model import LinearRegression
-import pickle
 from sklearn.metrics import mean_squared_error
-import time
-
-np.random.seed(int(time.time()))
 
 
 class MetaModel:
@@ -42,7 +37,6 @@ class PolynomialModel(MetaModel):
         except Exception as e:
             return e
 
-
     def fit(self, X: np.ndarray, y: np.ndarray) -> bool:
         try:
             assert self.power != None
@@ -53,23 +47,6 @@ class PolynomialModel(MetaModel):
             self.model.fit(_X, y)
         except Exception as e:
             return e
-
-
-    def save(self, path: str) -> bool:
-        try:
-            pickle.dump([self.model, self.power], open(path, "wb"))
-            return True
-        except Exception as e:
-            return False
-
-
-    def load(self, path: str) -> bool:
-        try:
-            self.model, self.power = pickle.load(open(path, "rb"))
-            return True
-        except Exception as e:
-            return False
-
 
     def preprocess(self, X: np.ndarray):
         data = X.tolist()
@@ -106,12 +83,12 @@ def gen_test_data():
 
     return data, y[:, np.newaxis]
 
+
 def RegisteredModel(key):
     models_dict = {
         '多项式模型': PolynomialModel
     }
     return models_dict[key]
-
 
 
 if __name__ == '__main__':
