@@ -1,8 +1,11 @@
+from tkinter import E
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import pickle
 from sklearn.metrics import mean_squared_error
 import time
+
+from sqlalchemy import true
 np.random.seed(int(time.time()))
 
 
@@ -13,13 +16,13 @@ class MetaModel:
     def pred(self, X: np.ndarray):
         pass
 
-    def fit(self, X: np.ndarray, y: np.ndarray):
+    def fit(self, X: np.ndarray, y: np.ndarray) -> bool:
         pass
 
-    def save(self, path: str):
+    def save(self, path: str) -> bool:
         pass
 
-    def load(self, path: str):
+    def load(self, path: str) -> bool:
         pass
 
 
@@ -29,27 +32,45 @@ class PolynomialModel(MetaModel):
         self.model = None
 
     def pred(self, X: np.ndarray):
-        assert self.model != None
-        assert self.power != None
-        assert X.shape[1] == len(self.power)
+        try:
+            assert self.model != None
+            assert self.power != None
+            assert X.shape[1] == len(self.power)
 
-        _X = self.preprocess(X)
-        preditions = self.model.predict(_X)
-        return preditions
+            _X = self.preprocess(X)
+            preditions = self.model.predict(_X)
+            return preditions
+        except Exception as e:
+            return e
 
-    def fit(self, X: np.ndarray, y: np.ndarray):
-        assert self.power != None
-        assert X.shape[1] == len(self.power)
 
-        self.model = LinearRegression(fit_intercept=False)
-        _X = self.preprocess(X)
-        self.model.fit(_X, y)
+    def fit(self, X: np.ndarray, y: np.ndarray) -> bool:
+        try:
+            assert self.power != None
+            assert X.shape[1] == len(self.power)
 
-    def save(self, path: str):
-        pickle.dump([self.model, self.power], open(path, "wb"))
+            self.model = LinearRegression(fit_intercept=False)
+            _X = self.preprocess(X)
+            self.model.fit(_X, y)
+        except Exception as e:
+            return e
 
-    def load(self, path: str):
-        self.model, self.power = pickle.load(open(path, "rb"))
+
+    def save(self, path: str) -> bool:
+        try:
+            pickle.dump([self.model, self.power], open(path, "wb"))
+            return True
+        except Exception as e:
+            return False
+
+
+    def load(self, path: str) -> bool:
+        try:
+            self.model, self.power = pickle.load(open(path, "rb"))
+            return True
+        except Exception as e:
+            return False
+
 
     def preprocess(self, X: np.ndarray):
         data = X.tolist()
