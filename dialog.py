@@ -1,15 +1,7 @@
 from PyQt5.Qt import QDialog
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QApplication,
-    QFileDialog,
-    QHBoxLayout,
-    QMainWindow,
-    QMessageBox,
     QPushButton,
-    QTextEdit,
     QVBoxLayout,
-    QWidget,
     QCheckBox,
     QLabel,
     QSpinBox,

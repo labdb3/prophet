@@ -8,7 +8,6 @@ import sys
 import traceback
 import pickle as pk
 
-from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
@@ -16,13 +15,13 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QWidget,
+    QVBoxLayout
 )
 from matplotlib import font_manager as fm
 import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 import matplotlib.pylab as plt
-import numpy as np
 import pandas as pd
 from dialog import paramDialog
 
@@ -65,7 +64,7 @@ class Prophet(QMainWindow):
 
         plot_area = QWidget(self)
         self.setCentralWidget(plot_area)
-        self.plot_area = QtWidgets.QVBoxLayout(plot_area)
+        self.plot_area = QVBoxLayout(plot_area)
         self.plot_area.setContentsMargins(0, 0, 0, 0)
 
         self.statusBar().showMessage('ready')
@@ -108,7 +107,7 @@ class Prophet(QMainWindow):
         self.plotToolbar = NavigationToolbar2QT(self.plotCanvas, self)
         self.plot_area.addWidget(self.plotCanvas)
         # add toolbar
-        self.addToolBar(QtCore.Qt.BottomToolBarArea, self.plotToolbar)
+        self.addToolBar(Qt.BottomToolBarArea, self.plotToolbar)
 
     def open_file(self, conf_key='open_dir', filter_ext='xlsx (*.xlsx)'):
         global cf
@@ -205,12 +204,12 @@ class Prophet(QMainWindow):
 
     def closeEvent(self, event):
         global conf, cf
-        #  reply = QMessageBox.warning(
-        #      self, "温馨提示", "即将退出, 确定？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        #  if(reply == QMessageBox.Yes):
-        #      event.accept()
-        #  if(reply == QMessageBox.No):
-        #      event.ignore()
+        reply = QMessageBox.warning(
+            self, "温馨提示", "即将退出, 确定？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if(reply == QMessageBox.Yes):
+            event.accept()
+        if(reply == QMessageBox.No):
+            event.ignore()
         event.accept()
         with open(conf, 'wt') as f:
             cf.write(f)
