@@ -138,24 +138,31 @@ class Prophet(QMainWindow):
         params = self.sub.get_params()
         print(params)
 
-        X = df.iloc[:, :-1]
-        Y = df.iloc[:, -1:]
+        X_params = list(filter(lambda t: t[0] and not t[-1], params))
+        Y_params = list(filter(lambda t: t[0] and t[-1], params))
+
+        X_labels = [p[1] for p in X_params]
+        X_powers = [p[2] for p in X_params]
+        Y_labels = [p[1] for p in Y_params]
+        self.artifact['X_labels'] = X_labels
+        self.artifact['Y_labels'] = Y_labels
+        self.artifact['X_powers'] = X_powers
+
+        X = df[X_labels]
+        Y = df[Y_labels]
+
         print(X)
         print(Y)
         kwargs = {
-            'power': [1]*X.shape[1]
+            'power': X_powers
         }
+
         model = RegisteredModel('多项式模型')(**kwargs)
-        Y_labels = Y.columns.to_list()
         X = X.to_numpy()
         Y = Y.to_numpy()
         r = model.fit(X, Y)
-        print('fit_result', r)
         Y_hat = model.pred(X)
-        print('pred_result')
-        #  self.Y_hat = Y_hat
         self.artifact['model'] = model
-        self.artifact['Y_labels'] = Y_labels
         self.plot(Y=Y, Y_hat=Y_hat, Y_labels=Y_labels)
 
     def open_pred(self, event):
@@ -163,13 +170,10 @@ class Prophet(QMainWindow):
         if not filepath:
             return
         df = pd.read_excel(filepath)
-        print(df)
-        X = df.iloc[:, :-1]
-        print(X)
-        self.artifact['X_labels'] = X.columns.to_list()
+        X = df[self.artifact['X_labels']]
         X = X.to_numpy()
         Y_hat = self.artifact['model'].pred(X)
-        self.artifact['Y_hat'] = Y_hat
+        self.Y_hat = Y_hat
         self.plot(Y_hat=Y_hat, Y_labels=self.artifact['Y_labels'])
 
     def save_model(self, event):
@@ -183,7 +187,7 @@ class Prophet(QMainWindow):
 
     def save_pred(self, event):
         df_y = pd.DataFrame(
-            self.artifact['Y_hat'], columns=self.artifact['Y_labels'])
+            self.Y_hat, columns=self.artifact['Y_labels'])
         filepath = QFileDialog.getSaveFileName(self, '保存预测', 'pred.xlsx')
         if filepath is None or len(filepath) < 2 or filepath[0] is None or filepath[0] == '':
             return
