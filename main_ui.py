@@ -9,26 +9,22 @@ import traceback
 import pickle as pk
 
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.Qt import QDialog
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QFileDialog,
-    QHBoxLayout,
     QMainWindow,
     QMessageBox,
-    QPushButton,
-    QTextEdit,
-    QVBoxLayout,
     QWidget,
 )
-from matplotlib import font_manager as fm, rcParams
+from matplotlib import font_manager as fm
 import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
+from dialog import paramDialog
 
 from model import RegisteredModel
 
@@ -109,7 +105,7 @@ class Prophet(QMainWindow):
                 ax.plot(y, label='预测_'+Y_labels[i])
         ax.legend(prop=prop)
         self.plotCanvas = FigureCanvas(fig)
-        self.plotToolbar = NavigationToolbar(self.plotCanvas, self)
+        self.plotToolbar = NavigationToolbar2QT(self.plotCanvas, self)
         self.plot_area.addWidget(self.plotCanvas)
         # add toolbar
         self.addToolBar(QtCore.Qt.BottomToolBarArea, self.plotToolbar)
@@ -129,6 +125,19 @@ class Prophet(QMainWindow):
             return
         df = pd.read_excel(filepath)
         print(df)
+        params = []
+        for c in df.columns:
+            p = [True, c, 1, False]
+            params.append(p)
+        params[-1][-1] = True
+        self.sub = paramDialog(params)
+
+        if not self.sub.exec_():
+            return
+
+        params = self.sub.get_params()
+        print(params)
+
         X = df.iloc[:, :-1]
         Y = df.iloc[:, -1:]
         print(X)
