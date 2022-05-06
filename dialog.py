@@ -1,11 +1,11 @@
 from PyQt5.Qt import QDialog
 from PyQt5.QtWidgets import (
-    QPushButton,
-    QVBoxLayout,
     QCheckBox,
+    QGridLayout,
     QLabel,
+    QPushButton,
     QSpinBox,
-    QGridLayout
+    QVBoxLayout,
 )
 
 
@@ -16,7 +16,7 @@ class paramDialog(QDialog):
         '''
         super(paramDialog, self).__init__()
 
-        header = ['选取','列名','阶数','预测']
+        header = ['选取', '列名', '阶数', '预测']
 
         self.setWindowTitle('自定义参数')
 

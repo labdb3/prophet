@@ -4,9 +4,9 @@
 import configparser
 import logging
 import os
+import pickle as pk
 import sys
 import traceback
-import pickle as pk
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -14,8 +14,8 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QMainWindow,
     QMessageBox,
+    QVBoxLayout,
     QWidget,
-    QVBoxLayout
 )
 from matplotlib import font_manager as fm
 import matplotlib
@@ -23,8 +23,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 import matplotlib.pylab as plt
 import pandas as pd
-from dialog import paramDialog
 
+from dialog import paramDialog
 from model import RegisteredModel
 
 logging.basicConfig(level=logging.DEBUG,  # 控制台打印的日志级别
@@ -61,6 +61,7 @@ class Prophet(QMainWindow):
         loadMenu.triggered.connect(self.load_model)
         savePredMenu.triggered.connect(self.save_pred)
         aboutAction.triggered.connect(self.about)
+        tutorAction.triggered.connect(self.tutorial)
 
         plot_area = QWidget(self)
         self.setCentralWidget(plot_area)
@@ -162,6 +163,7 @@ class Prophet(QMainWindow):
         r = model.fit(X, Y)
         Y_hat = model.pred(X)
         self.artifact['model'] = model
+        self.statusBar().showMessage('拟合完毕，图中显示在该数据集上的拟合效果')
         self.plot(Y=Y, Y_hat=Y_hat, Y_labels=Y_labels)
 
     def open_pred(self, event):
@@ -213,6 +215,17 @@ class Prophet(QMainWindow):
         event.accept()
         with open(conf, 'wt') as f:
             cf.write(f)
+
+    def tutorial(self, event):
+        text = '''
+        流程：
+        1. 先点击“拟合/打开文件”用来打开数据文件，弹出窗口选中相关列并设置相关参数后点击确定则会自动训练模型拟合数据。
+        2. 点击保存模型保存已经训练好的模型到文件。
+        3. 预测时先加载模型然后打开要预测的文件。
+
+        数据文件： 只支持xlsx类型的文件，第一行必须是列名，列名不能有重复的，只支持回归任务。
+        '''
+        QMessageBox.information(self, '教程', text)
 
 
 if __name__ == '__main__':
