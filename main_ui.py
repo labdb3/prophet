@@ -17,15 +17,15 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from matplotlib import font_manager as fm
+from matplotlib import font_manager
 import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 import matplotlib.pylab as plt
 import pandas as pd
 
-from dialog import paramDialog
-from model import RegisteredModel
+from dialog import PolynomialModelParamDialog, GreyModel11ParamDialog
+from model import RegisteredModel, cal_metrics
 
 logging.basicConfig(level=logging.DEBUG,  # 控制台打印的日志级别
                     filename='debug.log',
@@ -47,7 +47,7 @@ class Prophet(QMainWindow):
 
     def initUI(self):
         menubar = self.menuBar()
-        fitMenu = menubar.addAction('拟合/打开文件')
+        fitMenu = menubar.addMenu('拟合/打开文件')
         saveMenu = menubar.addAction('保存模型')
         loadMenu = menubar.addAction('加载模型')
         predMenu = menubar.addAction('预测/打开文件')
@@ -55,7 +55,10 @@ class Prophet(QMainWindow):
         helpMenu = menubar.addMenu('&帮助')
         aboutAction = helpMenu.addAction('About')
         tutorAction = helpMenu.addAction('教程')
-        fitMenu.triggered.connect(self.open_fit)
+        fitMenu.addAction('多项式模型').triggered.connect(
+            lambda _: self.open_fit('多项式模型'))
+        fitMenu.addAction('单元灰色模型').triggered.connect(
+            lambda _: self.open_fit('单元灰色模型'))
         predMenu.triggered.connect(self.open_pred)
         saveMenu.triggered.connect(self.save_model)
         loadMenu.triggered.connect(self.load_model)
@@ -93,8 +96,7 @@ class Prophet(QMainWindow):
             pass
         # plot
         fig, ax = plt.subplots()
-        fpath = os.path.join('./simkai.ttf')
-        prop = fm.FontProperties(fname=fpath)
+        prop = font_manager.FontProperties('simsun')
         if Y is not None:
             for i in range(Y.shape[1]):
                 y = Y[:, i]
@@ -109,6 +111,8 @@ class Prophet(QMainWindow):
         self.plot_area.addWidget(self.plotCanvas)
         # add toolbar
         self.addToolBar(Qt.BottomToolBarArea, self.plotToolbar)
+        if Y is not None:
+            self.show_metrics(Y, Y_hat)
 
     def open_file(self, conf_key='open_dir', filter_ext='xlsx (*.xlsx)'):
         global cf
@@ -119,63 +123,92 @@ class Prophet(QMainWindow):
         cf['Personal'][conf_key] = os.path.dirname(filepath)
         return filepath
 
-    def open_fit(self, event):
+    def open_fit(self, model_cls_name):
         filepath = self.open_file()
         if not filepath:
             return
-        df = pd.read_excel(filepath)
+        df = pd.read_excel(filepath, engine='openpyxl')
         print(df)
         params = []
-        for c in df.columns:
-            p = [True, c, 1, False]
-            params.append(p)
-        params[-1][-1] = True
-        self.sub = paramDialog(params)
-
+        if model_cls_name == '多项式模型':
+            for c in df.columns:
+                p = [True, c, 1, False]
+                params.append(p)
+            params[-1][-1] = True
+            self.sub = PolynomialModelParamDialog(params)
+        elif model_cls_name == '单元灰色模型':
+            for c in df.columns:
+                p = [False, c]
+                params.append(p)
+            params[-1][0] = True
+            self.sub = GreyModel11ParamDialog(params)
         if not self.sub.exec_():
             return
-
         params = self.sub.get_params()
         print(params)
+        if model_cls_name == '多项式模型':
+            X_params = list(filter(lambda t: t[0] and not t[-1], params))
+            Y_params = list(filter(lambda t: t[0] and t[-1], params))
 
-        X_params = list(filter(lambda t: t[0] and not t[-1], params))
-        Y_params = list(filter(lambda t: t[0] and t[-1], params))
-
-        X_labels = [p[1] for p in X_params]
-        X_powers = [p[2] for p in X_params]
-        Y_labels = [p[1] for p in Y_params]
-        self.artifact['X_labels'] = X_labels
-        self.artifact['Y_labels'] = Y_labels
-        self.artifact['X_powers'] = X_powers
-
-        X = df[X_labels]
-        Y = df[Y_labels]
-
-        print(X)
-        print(Y)
-        kwargs = {
-            'power': X_powers
-        }
-
-        model = RegisteredModel('多项式模型')(**kwargs)
-        X = X.to_numpy()
-        Y = Y.to_numpy()
-        r = model.fit(X, Y)
-        Y_hat = model.pred(X)
+            X_labels = [p[1] for p in X_params]
+            X_powers = [p[2] for p in X_params]
+            Y_labels = [p[1] for p in Y_params]
+            self.artifact['X_labels'] = X_labels
+            self.artifact['Y_labels'] = Y_labels
+            self.artifact['X_powers'] = X_powers
+            X = df[X_labels]
+            Y = df[Y_labels]
+            kwargs = {
+                'power': X_powers
+            }
+            model = RegisteredModel(model_cls_name)(**kwargs)
+            X = X.to_numpy()
+            Y = Y.to_numpy()
+            r = model.fit(X, Y)
+            Y_hat = model.pred(X)
+        elif model_cls_name == '单元灰色模型':
+            X_params = list(filter(lambda t: t[0], params))
+            if len(X_params) != 1:
+                return
+            Y_labels = [X_params[0][1]]
+            self.artifact['X_labels'] = None
+            self.artifact['Y_labels'] = Y_labels
+            Y = df[Y_labels]
+            model = RegisteredModel(model_cls_name)()
+            Y = Y.to_numpy().reshape(1, -1).T
+            model.fit(Y)
+            Y_hat = model.pred(Y).reshape(1, -1).T
         self.artifact['model'] = model
+        self.artifact['model_cls_name'] = model_cls_name
         self.statusBar().showMessage('拟合完毕，图中显示在该数据集上的拟合效果')
         self.plot(Y=Y, Y_hat=Y_hat, Y_labels=Y_labels)
+
+    def show_metrics(self, Y, Y_hat):
+        min_len = min(len(Y), len(Y_hat))
+        metrics = cal_metrics(Y[:min_len], Y_hat[:min_len])
+        metrics = '\n'.join('{}:{:.4f}'.format(k, v)
+                            for k, v in metrics.items())
+        QMessageBox.about(self, '拟合评估指标', metrics)
 
     def open_pred(self, event):
         filepath = self.open_file()
         if not filepath:
             return
-        df = pd.read_excel(filepath)
-        X = df[self.artifact['X_labels']]
-        X = X.to_numpy()
-        Y_hat = self.artifact['model'].pred(X)
-        self.Y_hat = Y_hat
-        self.plot(Y_hat=Y_hat, Y_labels=self.artifact['Y_labels'])
+        model = self.artifact['model']
+        model_cls_name = self.artifact['model_cls_name']
+        df = pd.read_excel(filepath, engine='openpyxl')
+        if model_cls_name == '多项式模型':
+            X = df[self.artifact['X_labels']]
+            X = X.to_numpy()
+            Y_hat = model.pred(X)
+            self.Y_hat = Y_hat
+            self.plot(Y_hat=Y_hat, Y_labels=self.artifact['Y_labels'])
+        elif model_cls_name == '单元灰色模型':
+            Y = df[self.artifact['Y_labels']]
+            Y = Y.to_numpy().reshape(1, -1).T
+            Y_hat = model.pred(Y).reshape(1, -1).T
+            self.Y_hat = Y_hat
+            self.plot(Y_hat=Y_hat, Y_labels=self.artifact['Y_labels'])
 
     def save_model(self, event):
         filepath = QFileDialog.getSaveFileName(self, '保存模型', 'model.bin')
@@ -219,7 +252,7 @@ class Prophet(QMainWindow):
     def tutorial(self, event):
         text = '''
         流程：
-        1. 先点击“拟合/打开文件”用来打开数据文件，弹出窗口选中相关列并设置相关参数后点击确定则会自动训练模型拟合数据。
+        1. 先点击“拟合/打开文件”选择模型名称，来打开数据文件，弹出窗口选中相关列并设置相关参数后点击确定则会自动训练模型拟合数据，会显示评价指标和曲线图。
         2. 点击保存模型保存已经训练好的模型到文件。
         3. 预测时先加载模型然后打开要预测的文件。
 

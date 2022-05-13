@@ -1,6 +1,16 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
+import math
+
+
+def cal_metrics(label, pred):
+    metrics = {
+        'MSE': mean_squared_error(label, pred),
+        'R2': r2_score(label, pred)
+    }
+    return metrics
 
 
 class MetaModel:
@@ -62,6 +72,48 @@ class PolynomialModel(MetaModel):
         return np.array(res)
 
 
+class GreyModel11(MetaModel):
+    def __init__(self) -> None:
+        self.a = None
+        self.b = None
+
+    def pred(self, X: np.ndarray):
+        const = self.b / self.a
+        X0 = X
+        F = [X0[0]]
+        k = 1
+        while k < len(X0) + 10:
+            F.append((X0[0] - const) * math.exp(-self.a * k) + const)
+            k += 1
+
+        # get the predicted sequence
+
+        x_hat = [X0[0]]
+        g = 1
+        while g < len(X0) + 10:
+            print(g)
+            x_hat.append(F[g] - F[g - 1])
+            g += 1
+        X0 = np.array(X0)
+        x_hat = np.array(x_hat)
+        return x_hat
+
+    def fit(self, X: np.ndarray) -> bool:
+        X0 = X.squeeze()
+        X1 = np.cumsum(X0)
+        M = (X1[1:]+X1[:-1])/2
+        # least square method
+        Y = np.mat(X0[1:]).reshape(-1, 1)
+        B = np.mat(-M).reshape(-1, 1)
+        B = np.hstack((B, np.ones((len(B), 1))))
+
+        # parameters
+        beta = np.linalg.inv(B.T.dot(B)).dot(B.T).dot(Y)
+        self.a, self.b = beta
+
+        # predict model
+
+
 def gen_data():
     data = np.random.random([5, 6])
     pow = [3, 2, 3, 3, 3, 3]
@@ -86,7 +138,8 @@ def gen_test_data():
 
 def RegisteredModel(key):
     models_dict = {
-        '多项式模型': PolynomialModel
+        '多项式模型': PolynomialModel,
+        '单元灰色模型': GreyModel11,
     }
     return models_dict[key]
 

@@ -6,15 +6,16 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QSpinBox,
     QVBoxLayout,
+    QRadioButton
 )
 
 
-class paramDialog(QDialog):
+class PolynomialModelParamDialog(QDialog):
     def __init__(self, params):
         '''
         params: [(checked, colname, power, is_y)]
         '''
-        super(paramDialog, self).__init__()
+        super(PolynomialModelParamDialog, self).__init__()
 
         header = ['选取', '列名', '阶数', '预测']
 
@@ -60,6 +61,42 @@ class paramDialog(QDialog):
         for r in range(1, self.params_lay.rowCount()):
             cb, col_name, sb, cb_y = param_values[r*colCount:(r+1)*colCount]
             p = (cb.isChecked(), col_name.text(), sb.value(), cb_y.isChecked())
+            params.append(p)
+        return params
+
+
+class GreyModel11ParamDialog(QDialog):
+    def __init__(self, params):
+        '''
+        params: [(checked, colname)]
+        '''
+        super(GreyModel11ParamDialog, self).__init__()
+
+        self.setWindowTitle('选择要预测的列')
+
+        params_lay = QVBoxLayout()
+        for checked, colname in params:
+            rb = QRadioButton(colname)
+            params_lay.addWidget(rb)
+
+        self.buttonOK = QPushButton('Ok')
+        self.buttonCancel = QPushButton('cancel')
+
+        lay = QVBoxLayout()
+        self.params_lay = params_lay
+        lay.addLayout(params_lay)
+
+        lay.addWidget(self.buttonOK)
+        lay.addWidget(self.buttonCancel)
+        self.setLayout(lay)
+        self.buttonOK.clicked.connect(self.accept)
+        self.buttonCancel.clicked.connect(self.reject)
+
+    def get_params(self):
+        param_values = layout_children(self.params_lay)
+        params = []
+        for p in param_values:
+            p = (p.isChecked(), p.text())
             params.append(p)
         return params
 
